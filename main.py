@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from regex import F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,9 @@ def predict(msg: Message):
     inputs = tokenizer(msg.text, return_tensors="pt", truncation=True, padding=True)
     with torch.no_grad():
         outputs = model(**inputs)
-    prediction = torch.argmax(outputs.logits, dim=1).item()
-    return {"scam": bool(prediction)}
-
+        probs = F.softmax(outputs.logits, dim=1)
+    scam_prob = probs[0][1].item()
+    return {
+        "scam": scam_prob > 0.5,
+        "probability": scam_prob
+    }

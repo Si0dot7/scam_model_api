@@ -1,67 +1,207 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ตรวจสอบข้อความ Scam</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scam Detector</title>
+  <style>
+    :root{
+      --blue:#2563eb; --blue-dark:#1e40af; --blue-soft:#eff6ff;
+      --text:#0f172a; --muted:#475569; --danger:#dc2626; --safe:#16a34a; --border:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:#ffffff; color:var(--text);
+    }
+    .wrap{
+      max-width:760px; margin:0 auto; padding:32px 16px;
+    }
+    .card{
+      background:#fff; border:1px solid var(--border); border-radius:16px; padding:24px;
+      box-shadow:0 6px 20px rgba(37,99,235,.08);
+    }
+    .title{
+      font-size:clamp(20px,3vw,28px); font-weight:800; letter-spacing:.2px; margin:0 0 6px;
+      color:var(--blue-dark);
+    }
+    .subtitle{margin:0 0 20px; color:var(--muted)}
+    label{font-weight:600; display:block; margin-bottom:8px}
+    textarea{
+      width:100%; min-height:140px; padding:14px 16px; resize:vertical;
+      border:1px solid var(--border); border-radius:12px; font-size:16px; outline:none;
+      transition:border .15s ease, box-shadow .15s ease; background:var(--blue-soft);
+    }
+    textarea:focus{border-color:var(--blue); box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+    .row{display:flex; gap:12px; align-items:center; margin-top:12px}
+    .btn{
+      appearance:none; border:0; border-radius:999px; padding:12px 18px; font-weight:700;
+      background:var(--blue); color:#fff; cursor:pointer; transition:transform .06s ease, background .2s ease;
+    }
+    .btn:hover{background:var(--blue-dark)}
+    .btn:active{transform:translateY(1px)}
+    .btn[disabled]{opacity:.6; cursor:not-allowed; transform:none}
+    .ghost{background:transparent; color:var(--blue); border:1px solid var(--blue)}
+    .status{
+      margin-top:18px; font-size:14px; color:var(--muted);
+    }
+    .result{
+      margin-top:18px; padding:16px; border:1px solid var(--border); border-radius:12px; background:#fff;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px; font-weight:700;
+    }
+    .scam{background: #fee2e2; color:var(--danger); border:1px solid #fecaca;}
+    .ok{background: #dcfce7; color:var(--safe); border:1px solid #bbf7d0;}
+    .err{background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;}
+    .hint{font-size:12px; color:var(--muted); margin-top:6px}
+    /* spinner */
+    .spinner{
+      width:18px; height:18px; border-radius:50%;
+      border:3px solid rgba(37,99,235,.25); border-top-color:var(--blue);
+      animation:spin .8s linear infinite; display:inline-block; vertical-align:-3px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footer{margin-top:28px; text-align:center; color:var(--muted); font-size:12px}
+    code{background:#f1f5f9; padding:2px 6px; border-radius:6px}
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 class="title">ตรวจจับข้อความ Scam</h1>
+      <p class="subtitle">พิมพ์ข้อความแล้วกด “วิเคราะห์” ระบบจะบอกว่าเป็น Scam หรือไม่</p>
 
-  <h1 class="text-2xl font-bold mb-4">ตรวจสอบข้อความ Scam</h1>
+      <form id="form">
+        <label for="text">ข้อความที่ต้องการตรวจสอบ</label>
+        <textarea id="text" placeholder="เช่น: ด่วน! คุณถูกรางวัล คลิกที่ลิงก์นี้เพื่อรับเงิน..."></textarea>
 
-  <form id="scamForm" class="w-full max-w-md">
-    <textarea
-      id="textInput"
-      class="w-full p-2 border rounded mb-2"
-      rows="4"
-      placeholder="พิมพ์ข้อความที่ต้องการตรวจสอบ..."></textarea>
-    <button
-      type="submit"
-      class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
-      ตรวจสอบ
-    </button>
-  </form>
+        <div class="row">
+          <button id="submitBtn" class="btn" type="submit">
+            วิเคราะห์
+          </button>
+          <button id="clearBtn" class="btn ghost" type="button">ล้างข้อความ</button>
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div id="result" class="result" style="display:none;"></div>
+        <div class="hint">หมายเหตุ: หากเรียกข้ามโดเมน อาจต้องเปิด CORS ที่ฝั่ง API</div>
+      </form>
+    </div>
 
-  <div id="result" class="mt-4 p-4 w-full max-w-md rounded border bg-white hidden"></div>
+    <div class="footer">
+      ใช้ POST ไปที่ <code>/predict</code> รูปแบบ <code>{"text": "&lt;ข้อความ&gt;"}</code>
+    </div>
+  </div>
 
   <script>
-    const form = document.getElementById('scamForm');
-    const resultDiv = document.getElementById('result');
+    // ตั้งค่า URL ของ API ที่นี่
+    const API_URL = "https://scam-model-api.onrender.com/predict";
 
-    form.addEventListener('submit', async (e) => {
+    const form = document.getElementById("form");
+    const textInput = document.getElementById("text");
+    const submitBtn = document.getElementById("submitBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+
+    function setLoading(isLoading){
+      if(isLoading){
+        submitBtn.setAttribute("disabled","disabled");
+        textInput.setAttribute("disabled","disabled");
+        submitBtn.innerHTML = '<span class="spinner"></span> กำลังวิเคราะห์...';
+        statusEl.textContent = "กำลังส่งคำขอไปยังโมเดล...";
+      }else{
+        submitBtn.removeAttribute("disabled");
+        textInput.removeAttribute("disabled");
+        submitBtn.textContent = "วิเคราะห์";
+        statusEl.textContent = "";
+      }
+    }
+
+    function showResult(content, type){
+      resultEl.style.display = "block";
+      if(type === "error"){
+        resultEl.innerHTML = `<div class="badge err">⚠️ ${content}</div>`;
+      }else if(type === "scam"){
+        resultEl.innerHTML = `
+          <div class="badge scam">🚨 ตรวจพบพฤติกรรม Scam</div>
+          <div style="margin-top:10px">ข้อความ: ${escapeHtml(textInput.value)}</div>`;
+      }else{
+        resultEl.innerHTML = `
+          <div class="badge ok">✅ ปลอดภัย ไม่ใช่ Scam</div>
+          <div style="margin-top:10px">ข้อความ: ${escapeHtml(textInput.value)}</div>`;
+      }
+    }
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])
+      );
+    }
+
+    clearBtn.addEventListener("click", () => {
+      textInput.value = "";
+      resultEl.style.display = "none";
+      statusEl.textContent = "";
+      textInput.focus();
+    });
+
+    // ส่งคำขอเมื่อกด Ctrl/Cmd + Enter
+    textInput.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      }
+    });
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const text = document.getElementById('textInput').value.trim();
-      if (!text) return;
+      const text = textInput.value.trim();
+      if(!text){
+        showResult("กรุณากรอกข้อความก่อน", "error");
+        return;
+      }
 
-      resultDiv.classList.add('hidden');
-      resultDiv.innerHTML = 'กำลังตรวจสอบ...';
+      // ป้องกันกดซ้ำระหว่างรอผล
+      setLoading(true);
 
-      try {
-        const res = await fetch('https://scam-model-api.onrender.com/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
+      // timeout กันค้าง
+      const controller = new AbortController();
+      const t = setTimeout(()=>controller.abort(), 20000); // 20s
+
+      try{
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+          signal: controller.signal
         });
 
-        if (!res.ok) throw new Error('API error');
+        // ถ้า API ไม่ตอบ CORS browser จะ block ก่อนถึงจุดนี้
+        if(!res.ok){
+          const msg = `API error: ${res.status} ${res.statusText}`;
+          showResult(msg, "error");
+          return;
+        }
 
         const data = await res.json();
-        resultDiv.innerHTML = `
-          <p><strong>ข้อความ:</strong> ${text}</p>
-          <p><strong>ผลตรวจ:</strong> ${
-            data.scam
-              ? '<span class="text-red-600">Scam ⚠️</span>'
-              : '<span class="text-green-600">ไม่ใช่ Scam ✅</span>'
-          }</p>
-        `;
-      } catch (err) {
-        resultDiv.innerHTML = `<p class="text-red-500">เกิดข้อผิดพลาด: ${err.message}</p>`;
-      } finally {
-        resultDiv.classList.remove('hidden');
+        // คาดหวังรูปแบบ { "scam": true/false }
+        if(typeof data.scam === "boolean"){
+          showResult(data.scam ? "" : "", data.scam ? "scam" : "ok");
+        }else{
+          showResult("รูปแบบผลลัพธ์ไม่ถูกต้อง (คาดหวัง key: scam)", "error");
+        }
+      }catch(err){
+        // ข้อผิดพลาดยอดฮิต: CORS / Timeout / Network
+        if (err.name === "AbortError"){
+          showResult("หมดเวลา (timeout) โปรดลองใหม่อีกครั้ง", "error");
+        }else{
+          showResult(`ไม่สามารถเชื่อมต่อ API (${err.message})`, "error");
+        }
+      }finally{
+        clearTimeout(t);
+        setLoading(false);
       }
     });
   </script>
-
 </body>
 </html>
