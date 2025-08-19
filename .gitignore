@@ -1,0 +1,11 @@
+# ไม่เก็บโฟลเดอร์โมเดลและผลลัพธ์
+scam_model/
+results/
+
+# ไฟล์อื่น ๆ ที่ไม่อยากเก็บ
+*.pyc
+__pycache__/
+.ipynb_checkpoints
+.env
+upload_model.py
+scam.ipynb
