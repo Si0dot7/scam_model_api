@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตรวจสอบข้อความ Scam</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+  <h1 class="text-2xl font-bold mb-4">ตรวจสอบข้อความ Scam</h1>
+
+  <form id="scamForm" class="w-full max-w-md">
+    <textarea
+      id="textInput"
+      class="w-full p-2 border rounded mb-2"
+      rows="4"
+      placeholder="พิมพ์ข้อความที่ต้องการตรวจสอบ..."></textarea>
+    <button
+      type="submit"
+      class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+      ตรวจสอบ
+    </button>
+  </form>
+
+  <div id="result" class="mt-4 p-4 w-full max-w-md rounded border bg-white hidden"></div>
+
+  <script>
+    const form = document.getElementById('scamForm');
+    const resultDiv = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('textInput').value.trim();
+      if (!text) return;
+
+      resultDiv.classList.add('hidden');
+      resultDiv.innerHTML = 'กำลังตรวจสอบ...';
+
+      try {
+        const res = await fetch('https://scam-model-api.onrender.com/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+
+        if (!res.ok) throw new Error('API error');
+
+        const data = await res.json();
+        resultDiv.innerHTML = `
+          <p><strong>ข้อความ:</strong> ${text}</p>
+          <p><strong>ผลตรวจ:</strong> ${
+            data.scam
+              ? '<span class="text-red-600">Scam ⚠️</span>'
+              : '<span class="text-green-600">ไม่ใช่ Scam ✅</span>'
+          }</p>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<p class="text-red-500">เกิดข้อผิดพลาด: ${err.message}</p>`;
+      } finally {
+        resultDiv.classList.remove('hidden');
+      }
+    });
+  </script>
+
+</body>
+</html>
