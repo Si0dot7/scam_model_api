@@ -32,7 +32,7 @@ async def add_cors_header(request: Request, call_next):
     return response
 
 @app.options("/{rest_of_path:path}")
-async def preflight_handler():
+async def preflight_handler(rest_of_path: str):
     return JSONResponse(
         content={},
         headers={
@@ -42,9 +42,11 @@ async def preflight_handler():
         },
     )
 
-@app.options("/predict")
-async def predict_options():
-    return {}
+
+@app.get("/")
+def health():
+    return {"status": "ok"}
+
 
 @app.post("/predict")
 def predict(msg: Message):
