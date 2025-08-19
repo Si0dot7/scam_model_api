@@ -1,13 +1,13 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from pydantic import BaseModel
-import torch.nn.functional as F 
+import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# ✅ ให้ CORSMiddleware จัดการเอง
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -23,30 +23,9 @@ model.eval()
 class Message(BaseModel):
     text: str
 
-@app.middleware("http")
-async def add_cors_header(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
-
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(rest_of_path: str):
-    return JSONResponse(
-        content={},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
-    )
-
-
 @app.get("/")
 def health():
     return {"status": "ok"}
-
 
 @app.post("/predict")
 def predict(msg: Message):
