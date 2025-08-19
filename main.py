@@ -20,6 +20,10 @@ model.eval()
 
 class Message(BaseModel):
     text: str
+    
+@app.options("/predict")
+async def predict_options():
+    return {}
 
 @app.post("/predict")
 def predict(msg: Message):
