@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from regex import F
+import torch.nn.functional as F 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from fastapi.middleware.cors import CORSMiddleware
